@@ -12,8 +12,9 @@ import {
 } from "./components/DateRangeSelector";
 import { getEventsForVenues, getEventsForArea, type RAEvent } from "./lib/ra-api";
 import { downloadICal } from "./lib/ical";
-import { Calendar, Download, Link, X } from "lucide-preact";
+import { Calendar, Download, Link, X, Info } from "lucide-preact";
 import { SubscribeModal } from "./components/SubscribeModal";
+import { AboutModal } from "./components/AboutModal";
 
 export function App() {
   const [areaId, setAreaId] = useState<string>("13"); // Default to London
@@ -80,6 +81,7 @@ export function App() {
   }, [events, selectedCalendarRange]);
 
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
 
   const handleExport = () => {
     if (events.length === 0) return;
@@ -103,9 +105,18 @@ export function App() {
     <div className="min-h-screen bg-zinc-950">
       <header className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm sticky top-0 z-20">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-zinc-400" />
-            <h1 className="font-semibold">RA → Cal</h1>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-zinc-400" />
+              <h1 className="font-semibold">RA → Cal</h1>
+            </div>
+            <button
+              onClick={() => setShowAboutModal(true)}
+              className="p-1.5 hover:bg-zinc-800 rounded-full transition-colors"
+              title="About"
+            >
+              <Info className="w-4 h-4 text-zinc-500" />
+            </button>
           </div>
           {events.length > 0 && (
             <Button onClick={handleExport} size="sm">
@@ -211,6 +222,10 @@ export function App() {
             url={getSubscriptionUrl()}
             onClose={() => setShowSubscribeModal(false)}
           />
+        )}
+
+        {showAboutModal && (
+          <AboutModal onClose={() => setShowAboutModal(false)} />
         )}
       </main>
     </div>
