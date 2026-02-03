@@ -75,35 +75,51 @@ async function fetchEventsForArea(areaId: string, startDate: string, endDate: st
   const pageSize = 100;
 
   while (true) {
-    const res = await fetch("https://ra.co/graphql", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-        Referer: "https://ra.co/events",
-        Origin: "https://ra.co",
-      },
-      body: JSON.stringify({
-        operationName: "GET_EVENT_LISTINGS",
-        query: GET_EVENT_LISTINGS_BY_AREA,
-        variables: {
-          filters: {
-            areas: { eq: parseInt(areaId, 10) },
-            listingDate: {
-              gte: startDate.split("T")[0],
-              lte: endDate.split("T")[0],
-            },
-            listingPosition: { eq: 1 },
-          },
-          pageSize,
-          page,
+    let res: Response;
+    try {
+      res = await fetch("https://ra.co/graphql", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+          Referer: "https://ra.co/events",
+          Origin: "https://ra.co",
         },
-      }),
-    });
+        body: JSON.stringify({
+          operationName: "GET_EVENT_LISTINGS",
+          query: GET_EVENT_LISTINGS_BY_AREA,
+          variables: {
+            filters: {
+              areas: { eq: parseInt(areaId, 10) },
+              listingDate: {
+                gte: startDate.split("T")[0],
+                lte: endDate.split("T")[0],
+              },
+              listingPosition: { eq: 1 },
+            },
+            pageSize,
+            page,
+          },
+        }),
+      });
+    } catch {
+      // Network error - return what we have so far
+      break;
+    }
 
     if (!res.ok) break;
-    const json = await res.json() as { data?: { eventListings?: { data?: Array<{ event: RAEvent }> } } };
-    const events = (json.data?.eventListings?.data || []).map((d) => d.event);
+
+    let json: { data?: { eventListings?: { data?: Array<{ event: RAEvent }> } } };
+    try {
+      json = await res.json();
+    } catch {
+      // Malformed JSON - return what we have
+      break;
+    }
+
+    const events = (json.data?.eventListings?.data || [])
+      .map((d) => d.event)
+      .filter((e): e is RAEvent => e != null);
     allEvents.push(...events);
 
     if (events.length < pageSize || allEvents.length >= 500) break;
@@ -114,31 +130,43 @@ async function fetchEventsForArea(areaId: string, startDate: string, endDate: st
 }
 
 async function fetchEventsForVenue(venueId: string, startDate: string, endDate: string): Promise<RAEvent[]> {
-  const res = await fetch("https://ra.co/graphql", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-      Referer: "https://ra.co/events",
-      Origin: "https://ra.co",
-    },
-    body: JSON.stringify({
-      operationName: "GET_EVENTS_LISTING",
-      query: GET_EVENTS_LISTING,
-      variables: {
-        filters: [
-          { type: "CLUB", value: venueId },
-          { type: "DATERANGE", value: JSON.stringify({ gte: startDate, lte: endDate }) },
-        ],
-        pageSize: 100,
-        page: 1,
+  let res: Response;
+  try {
+    res = await fetch("https://ra.co/graphql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        Referer: "https://ra.co/events",
+        Origin: "https://ra.co",
       },
-    }),
-  });
+      body: JSON.stringify({
+        operationName: "GET_EVENTS_LISTING",
+        query: GET_EVENTS_LISTING,
+        variables: {
+          filters: [
+            { type: "CLUB", value: venueId },
+            { type: "DATERANGE", value: JSON.stringify({ gte: startDate, lte: endDate }) },
+          ],
+          pageSize: 100,
+          page: 1,
+        },
+      }),
+    });
+  } catch {
+    return [];
+  }
 
   if (!res.ok) return [];
-  const json = await res.json() as { data?: { listing?: { data?: RAEvent[] } } };
-  return json.data?.listing?.data || [];
+
+  let json: { data?: { listing?: { data?: RAEvent[] } } };
+  try {
+    json = await res.json();
+  } catch {
+    return [];
+  }
+
+  return (json.data?.listing?.data || []).filter((e): e is RAEvent => e != null);
 }
 
 function formatICSDate(isoString: string): string {

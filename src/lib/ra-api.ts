@@ -16,8 +16,6 @@ export class APIError extends Error {
 }
 
 async function gql<T>(operationName: string, query: string, variables: object): Promise<T> {
-  console.log(`[RA API] ${operationName}`, variables);
-
   let res: Response;
   try {
     res = await fetch(RA_GRAPHQL_URL, {
@@ -35,9 +33,6 @@ async function gql<T>(operationName: string, query: string, variables: object): 
     );
   }
 
-  const cacheStatus = res.headers.get("X-Cache");
-  console.log(`[RA API] ${operationName} cache: ${cacheStatus || "N/A"}`);
-
   if (!res.ok) {
     if (res.status === 429) {
       throw new APIError("Rate limited. Please wait a moment and try again.", 429);
@@ -48,11 +43,19 @@ async function gql<T>(operationName: string, query: string, variables: object): 
     throw new APIError(`Request failed with status ${res.status}`, res.status);
   }
 
-  const json = await res.json();
-  console.log(`[RA API] ${operationName} response:`, JSON.stringify(json));
+  let json: { data?: T; errors?: Array<{ message: string }> };
+  try {
+    json = await res.json();
+  } catch {
+    throw new APIError("Invalid response from server. The API may have changed.");
+  }
 
   if (json.errors) {
     throw new APIError(json.errors[0]?.message || "An error occurred while fetching data");
+  }
+
+  if (!json.data) {
+    throw new APIError("No data returned from server");
   }
 
   return json.data;

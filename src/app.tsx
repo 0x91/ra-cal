@@ -34,14 +34,27 @@ export function App() {
     return { start: today, end: nextMonth };
   });
 
-  // Fetch events when venues or date range change
+  // Fetch events when selection changes
   useEffect(() => {
-    // For "All Venues" mode, don't preload - wait for day selection
+    // For "All Venues" mode, wait for calendar date selection
     if (allVenues) {
-      setEvents([]);
+      if (!selectedCalendarRange?.end) {
+        setEvents([]);
+        return;
+      }
+      const dayStart = new Date(selectedCalendarRange.start);
+      const dayEnd = new Date(selectedCalendarRange.end);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+
+      setLoading(true);
+      getEventsForArea(areaId, dayStart.toISOString(), dayEnd.toISOString())
+        .then(setEvents)
+        .catch(() => setEvents([]))
+        .finally(() => setLoading(false));
       return;
     }
 
+    // Normal venue mode
     if (selectedVenues.length === 0) {
       setEvents([]);
       return;
@@ -52,26 +65,9 @@ export function App() {
     setLoading(true);
     getEventsForVenues(selectedVenues, start.toISOString(), end.toISOString())
       .then(setEvents)
-      .catch(console.error)
+      .catch(() => setEvents([]))
       .finally(() => setLoading(false));
-  }, [selectedVenues, allVenues, areaId, datePreset, customDateRange]);
-
-  // Fetch events for selected date range in "All Venues" mode
-  useEffect(() => {
-    if (!allVenues || !selectedCalendarRange?.end) {
-      return;
-    }
-
-    const dayStart = new Date(selectedCalendarRange.start);
-    const dayEnd = new Date(selectedCalendarRange.end);
-    dayEnd.setDate(dayEnd.getDate() + 1);
-
-    setLoading(true);
-    getEventsForArea(areaId, dayStart.toISOString(), dayEnd.toISOString())
-      .then(setEvents)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [allVenues, areaId, selectedCalendarRange]);
+  }, [selectedVenues, allVenues, areaId, datePreset, customDateRange, selectedCalendarRange]);
 
   // Filter events when a calendar date range is selected
   const displayedEvents = useMemo(() => {

@@ -18,7 +18,7 @@ export const onRequestPost: PagesFunction = async (context) => {
   const cacheUrl = new URL(`https://cache.internal/${cacheKey}`);
   const cacheRequest = new Request(cacheUrl.toString());
 
-  // Try cache
+  // Try cache first
   const cachedResponse = await cache.match(cacheRequest);
   if (cachedResponse) {
     const headers = new Headers(cachedResponse.headers);
@@ -44,6 +44,7 @@ export const onRequestPost: PagesFunction = async (context) => {
 
     const data = await raResponse.text();
 
+    // Only cache successful responses
     if (raResponse.ok) {
       const responseToCache = new Response(data, {
         status: raResponse.status,
@@ -53,19 +54,28 @@ export const onRequestPost: PagesFunction = async (context) => {
         },
       });
       context.waitUntil(cache.put(cacheRequest, responseToCache.clone()));
+
+      return new Response(data, {
+        status: raResponse.status,
+        headers: {
+          "Content-Type": "application/json",
+          "X-Cache": "MISS",
+        },
+      });
     }
 
+    // API returned error - pass through with appropriate status
     return new Response(data, {
       status: raResponse.status,
       headers: {
         "Content-Type": "application/json",
-        "X-Cache": "MISS",
+        "X-Cache": "ERROR",
       },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return new Response(
-      JSON.stringify({ errors: [{ message: `Failed to fetch: ${message}` }] }),
+      JSON.stringify({ errors: [{ message: `Unable to reach RA: ${message}` }] }),
       {
         status: 502,
         headers: { "Content-Type": "application/json", "X-Cache": "ERROR" },

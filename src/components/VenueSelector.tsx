@@ -112,8 +112,8 @@ export function VenueSelector({
           (r) => !venues.some((v) => v.id === r.id)
         );
         setSearchResults(newResults);
-      } catch (e) {
-        console.error("Search error:", e);
+      } catch {
+        // Search failed - ignore, user can retry
       } finally {
         setSearching(false);
       }
