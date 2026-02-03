@@ -1,0 +1,40 @@
+{
+  "name": "ra-cal",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "workerd",
+      "sharp"
+    ]
+  },
+  "scripts": {
+    "dev": "vite",
+    "dev:worker": "wrangler dev",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "deploy": "pnpm run build && wrangler pages deploy dist --project-name ra-cal",
+    "generate-icons": "node scripts/generate-icons.js"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "ics": "^3.8.1",
+    "lucide-preact": "^0.563.0",
+    "preact": "^10.27.2",
+    "tailwind-merge": "^3.4.0"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.2",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/node": "^24.10.1",
+    "sharp": "^0.34.5",
+    "tailwindcss": "^4.1.18",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4",
+    "vite-plugin-pwa": "^1.2.0",
+    "wrangler": "^4.62.0"
+  }
+}
